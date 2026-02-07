@@ -2,10 +2,26 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TopicContent, GrandQuiz, GrandFlashcards } from "../types";
 
-// Always initialize GoogleGenAI inside functions to ensure fresh state and correct key usage.
+/**
+ * Safely get the API Key. 
+ * If running in a static environment where process.env is not defined, 
+ * it returns null to prevent the app from crashing.
+ */
+const getApiKey = () => {
+  try {
+    return process.env.API_KEY || null;
+  } catch (e) {
+    return null;
+  }
+};
+
 export const generateTopicContent = async (topicTitle: string): Promise<TopicContent> => {
-  // Use the direct process.env.API_KEY when initializing.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error("API Key not found. AI features are disabled in static mode.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Act as a Sanskrit expert teacher. Based on the "Bhaashaa Praveshah - I" curriculum, generate content for the topic: "${topicTitle}". 
@@ -32,10 +48,10 @@ export const generateTopicContent = async (topicTitle: string): Promise<TopicCon
             items: {
               type: Type.OBJECT,
               properties: {
-                question: { type: Type.STRING, description: "Question text in Devanagari" },
-                options: { type: Type.ARRAY, items: { type: Type.STRING }, description: "4 options in Devanagari" },
-                correctAnswer: { type: Type.STRING, description: "The correct option text in Devanagari" },
-                explanation: { type: Type.STRING, description: "Explanation in English" },
+                question: { type: Type.STRING },
+                options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                correctAnswer: { type: Type.STRING },
+                explanation: { type: Type.STRING },
                 difficulty: { type: Type.STRING, enum: ["Easy", "Medium", "Hard"] }
               },
               required: ["question", "options", "correctAnswer", "explanation", "difficulty"]
@@ -46,8 +62,8 @@ export const generateTopicContent = async (topicTitle: string): Promise<TopicCon
             items: {
               type: Type.OBJECT,
               properties: {
-                front: { type: Type.STRING, description: "Sanskrit text in Devanagari" },
-                back: { type: Type.STRING, description: "Meaning/Translation" }
+                front: { type: Type.STRING },
+                back: { type: Type.STRING }
               },
               required: ["front", "back"]
             }
@@ -58,20 +74,18 @@ export const generateTopicContent = async (topicTitle: string): Promise<TopicCon
     }
   });
 
-  // Accessing the .text property directly (not calling as a function).
   return JSON.parse(response.text || '{}');
 };
 
 export const generateGrandQuiz = async (): Promise<GrandQuiz> => {
-  // Use the direct process.env.API_KEY when initializing.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("API Key missing");
+
+  const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
     contents: `Generate a comprehensive "Grand Quiz" based on the entire "Bhaashaa Praveshah - I" Sanskrit book. 
-    Total 30 questions. 
-    Distribution: 10 Easy, 10 Medium, 10 Hard. 
-    CRITICAL: All questions and options MUST be in Devanagari script/Sanskrit language. 
-    Cover topics: Vibhaktis (1-7), Lakaras (Present, Past, Future), Sankhyas, and daily vocabulary.`,
+    Total 30 questions. 10 Easy, 10 Medium, 10 Hard. All in Devanagari.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -82,10 +96,10 @@ export const generateGrandQuiz = async (): Promise<GrandQuiz> => {
             items: {
               type: Type.OBJECT,
               properties: {
-                question: { type: Type.STRING, description: "In Devanagari" },
-                options: { type: Type.ARRAY, items: { type: Type.STRING }, description: "In Devanagari" },
-                correctAnswer: { type: Type.STRING, description: "In Devanagari" },
-                explanation: { type: Type.STRING, description: "In English/Marathi" },
+                question: { type: Type.STRING },
+                options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                correctAnswer: { type: Type.STRING },
+                explanation: { type: Type.STRING },
                 difficulty: { type: Type.STRING }
               },
               required: ["question", "options", "correctAnswer", "explanation", "difficulty"]
@@ -96,18 +110,17 @@ export const generateGrandQuiz = async (): Promise<GrandQuiz> => {
       }
     }
   });
-  // Accessing the .text property directly.
   return JSON.parse(response.text || '{}');
 };
 
 export const generateGrandFlashcards = async (): Promise<GrandFlashcards> => {
-  // Use the direct process.env.API_KEY when initializing.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("API Key missing");
+
+  const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',
-    contents: `Generate a grand list of 30 flashcards spanning the entire course of "Bhaashaa Praveshah - I". 
-    Focus on key grammar rules, vocabulary, and common sentences. 
-    CRITICAL: Front side MUST be in Devanagari script/Sanskrit.`,
+    contents: `Generate a grand list of 30 flashcards spanning "Bhaashaa Praveshah - I". Front in Devanagari.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -118,8 +131,8 @@ export const generateGrandFlashcards = async (): Promise<GrandFlashcards> => {
             items: {
               type: Type.OBJECT,
               properties: {
-                front: { type: Type.STRING, description: "Sanskrit term/phrase in Devanagari" },
-                back: { type: Type.STRING, description: "Meaning in English or Marathi" }
+                front: { type: Type.STRING },
+                back: { type: Type.STRING }
               }
             }
           }
@@ -127,6 +140,5 @@ export const generateGrandFlashcards = async (): Promise<GrandFlashcards> => {
       }
     }
   });
-  // Accessing the .text property directly.
   return JSON.parse(response.text || '{}');
 };
