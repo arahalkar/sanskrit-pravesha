@@ -10,11 +10,29 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fffdfa;
         }
         .devanagari {
             font-family: 'Noto Sans Devanagari', serif;
         }
+        /* Loading state for before React mounts */
+        #root:empty::before {
+            content: 'Loading Samskrita App...';
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #ea580c;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
     </style>
+<script>
+    // Critical: Polyfill process for browser environment to prevent ReferenceErrors
+    window.process = window.process || { env: {} };
+</script>
 <script type="importmap">
 {
   "imports": {
